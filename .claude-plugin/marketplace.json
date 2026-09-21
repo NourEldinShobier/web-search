@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "web-search",
+  "description": "Token-efficient web research for Claude Code.",
+  "owner": { "name": "Nour Eldin Shobier", "url": "https://github.com/NourEldinShobier" },
+  "plugins": [
+    {
+      "name": "web-search",
+      "description": "Web, news, paper and image search plus page/PDF reading via a fast Bun CLI; redirects WebSearch/WebFetch to it.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
