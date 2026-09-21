@@ -45,7 +45,6 @@ Read options (URLs can also come from stdin, one per line):
 Common: --json (structured output), --fresh (skip the 1h/24h cache), -h, --help
 Env: JINA_API_KEY (needed for search; raises read limits)
      TYPESAFE_API_KEY (optional: Jev picks sources and judges relevance)
-     SEARCH1API_API_KEY (optional: adds Google, DuckDuckGo, Yandex and each site's own engine)
      WEB_SEARCH_CACHE_DIR (default ~/.cache/web-search)
 Exit codes: 0 ok, 1 usage error, 2 API/network error`;
 

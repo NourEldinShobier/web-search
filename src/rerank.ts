@@ -30,7 +30,7 @@ export function keepRelevant<T>(items: T[], scores: number[]): T[] {
   const kept = items
     .map((item, i) => ({ item, s: scores[i] ?? 0 }))
     .filter((x) => x.s >= cutoff)
-    // Rounded so near-ties keep the incoming order (engine agreement, then rank).
+    // Rounded so near-ties keep the incoming order (source agreement, then rank).
     .sort((a, b) => Math.round(b.s * 100) - Math.round(a.s * 100))
     .map((x) => x.item);
   return kept.length ? kept : items;

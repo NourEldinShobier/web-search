@@ -103,13 +103,13 @@ import { merge, parseSources, pickSources } from '../src/multi';
 import { buildCandidates } from '../src/candidates';
 
 describe('multi-source search', () => {
-  test('merges the same page from two engines and ranks agreement first', () => {
+  test('merges the same page from two sources and ranks agreement first', () => {
     const hits = merge([
       { source: 'web', items: [{ title: 'A', url: 'https://a.com/x' }, { title: 'B', url: 'https://www.b.com/y/?utm_source=z' }] },
       { source: 'reddit', items: [{ title: 'B', url: 'https://b.com/y', description: 'longer snippet' }] },
     ]);
     expect(hits.map((h) => h.url)).toEqual(['https://www.b.com/y/?utm_source=z', 'https://a.com/x']);
-    expect(hits[0]).toMatchObject({ sources: ['web', 'reddit'], engines: 2, position: 1, description: 'longer snippet' });
+    expect(hits[0]).toMatchObject({ sources: ['web', 'reddit'], position: 1, description: 'longer snippet' });
   });
 
   test('Jev source probabilities: specific sources win, web only when also wanted', () => {

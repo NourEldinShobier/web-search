@@ -3,7 +3,7 @@
 ## Pipeline
 
 ```
-search:  query ─► [Jev: sources, window, query] ─► every source's engines in parallel ─► merge by URL
+search:  query ─► [Jev: sources, window, query] ─► every source in parallel ─► merge by URL
                ─► Jev or Jina Reranker ─► drop off-topic ─► top N ─► [read top K]
 read:    url   ─► r.jina.ai (markdown) ─► --focus (BM25) or token cap ─► output
                         ▲
@@ -15,16 +15,15 @@ read:    url   ─► r.jina.ai (markdown) ─► --focus (BM25) or token cap �
 | `src/cli.ts` | Argument parsing, commands, output formatting |
 | `src/jina.ts` | Jina Search (`svip.jina.ai`), Reader (`r.jina.ai`) and screenshot client, with one retry on dropped connections, 5xx and 429 |
 | `src/rerank.ts` | Jina Reranker call and the relevance cutoff |
-| `src/sources.ts` | The sources and the engine lanes behind each |
+| `src/sources.ts` | The sources and the Jina search behind each |
 | `src/multi.ts` | Planning, parallel lanes, merging by URL |
 | `src/jev.ts` | TypeSafe Jev: reading the request and judging relevance |
 | `src/candidates.ts` | Keyword-query candidates Jev chooses between |
-| `src/search1api.ts` | Optional Search1API engines |
 | `src/focus.ts` | `--focus` passage selection and token-cap truncation |
 | `src/cache.ts` | SQLite cache using Bun's built-in `bun:sqlite` |
 | `src/hook.ts` | The Claude Code `PreToolUse` redirect |
 
-There are no runtime dependencies beyond Bun. Source list, Jev questions, candidates and the Search1API request shape are adapted from [jev-search](https://github.com/superagents-lab/jev-search) (MIT).
+There are no runtime dependencies beyond Bun. Source list, Jev questions and candidates are adapted from [jev-search](https://github.com/superagents-lab/jev-search) (MIT).
 
 ## Search
 
@@ -34,11 +33,11 @@ When reranking is on (the default for everything except images), the CLI fetches
 
 ## Sources and Jev
 
-Each source is one or more engine lanes: `reddit` is a Jina search restricted to `reddit.com`, plus Google restricted to Reddit and Reddit's own search when `SEARCH1API_API_KEY` is set. All lanes run at once; a failed lane prints a warning and the rest still count.
+Each source is one Jina search: `reddit` is restricted to `reddit.com`, `news` and `arxiv` use Jina's own search types, `web` is unrestricted. All run at once; a failed source prints a warning and the rest still count.
 
 With `TYPESAFE_API_KEY`, one Jev call answers a yes/no question per source ("Would Reddit threads fit this request?"), picks a time window, and chooses the best keyword query from candidates built by stripping time, source and filler words from the request. Sources scoring 0.6 or more are searched; if none do, `web` is. The plain web search starts while Jev is thinking and is reused when the plan keeps it. After merging, a second Jev call asks of each result whether it is about what was asked; results under half the best score are dropped. Jev returns typed answers in 70–500 ms, so a planned multi-source search takes about 2 s cold and 0.25 s cached.
 
-Results are merged by canonical URL (lowercased host and path, tracking parameters removed). Equal relevance scores are broken by how many engines returned the page, then by its best rank.
+Results are merged by canonical URL (lowercased host and path, tracking parameters removed). Equal relevance scores are broken by how many sources returned the page, then by its best rank.
 
 ## Reading
 

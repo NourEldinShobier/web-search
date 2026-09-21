@@ -1,6 +1,6 @@
 {
   "name": "web-search",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Web, news, paper and image search plus page/PDF reading through a fast Bun CLI built on Jina Search, Reader and Reranker, plus a Sonnet research agent that reports back. Replaces WebSearch/WebFetch with cached, token-trimmed output.",
   "author": {
     "name": "Nour Eldin Shobier",

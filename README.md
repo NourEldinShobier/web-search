@@ -32,7 +32,7 @@ A typical web page is 20,000–100,000 tokens, and most of that is menus and lin
 
 - **Focus:** `--focus "question"` keeps only the relevant passages, often 90% smaller.
 - **Cap:** pages stop at 4,000 tokens, and the end of the output says where to read on. Nothing is lost.
-- **Many sources at once:** the web, news, Reddit, Hacker News, GitHub, Stack Overflow, X, YouTube, Wikipedia and arXiv, merged by URL. Pages found by several engines rank higher.
+- **Many sources at once:** the web, news, Reddit, Hacker News, GitHub, Stack Overflow, X, YouTube, Wikipedia and arXiv, merged by URL. Pages found by several sources rank higher.
 - **Better results:** off-topic hits are dropped (by Jev if you have a TypeSafe key, otherwise Jina Reranker).
 - **Cache:** repeat calls are free (searches are kept 1 hour, pages 24 hours).
 - **Speed:** about 75 ms to start, 1–2 s per search, under 1 s per page.
@@ -95,7 +95,6 @@ Details: [docs/claude-code.md](docs/claude-code.md).
 |---|---|---|
 | `JINA_API_KEY` | Yes | Search, reading, reranking ([free key](https://jina.ai/?sui=apikey)) |
 | `TYPESAFE_API_KEY` | Optional | Jev picks sources, time window and query, and judges which results are on topic ([typesafe.ai](https://typesafe.ai)) |
-| `SEARCH1API_API_KEY` | Optional | More engines per source: Google, DuckDuckGo, Yandex, plus Reddit's, GitHub's, YouTube's and other sites' own search ([search1api.com](https://www.search1api.com)) |
 
 ## Use it without Claude Code
 
@@ -129,7 +128,7 @@ web-search --help
 
 - Built on [Jina AI](https://jina.ai)'s Reader, Search and Reranker APIs. Request options follow [jina-ai/reader](https://github.com/jina-ai/reader) and [jina-ai/MCP](https://github.com/jina-ai/MCP).
 - Command design borrows from [jina-ai/cli](https://github.com/jina-ai/cli).
-- Multi-source search, the Jev questions, query candidates and the Search1API client are adapted from [superagents-lab/jev-search](https://github.com/superagents-lab/jev-search) (MIT, Copyright (c) 2026 Search1API).
+- Multi-source search, the Jev questions and query candidates are adapted from [superagents-lab/jev-search](https://github.com/superagents-lab/jev-search) (MIT, Copyright (c) 2026 Search1API).
 - Jev by [TypeSafe](https://typesafe.ai).
 
 ## License

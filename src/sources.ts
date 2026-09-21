@@ -4,16 +4,10 @@
  */
 import type { SearchType } from './jina';
 
-/** One engine call. `jina` is always available; `search1api` lanes need SEARCH1API_API_KEY. */
+/** One Jina search call: a search type, optionally restricted to one site. */
 export interface Lane {
-  engine: 'jina' | 'search1api';
-  /** Jina search type, or the Search1API `search_service`. */
   type?: SearchType;
-  service?: string;
-  /** Restrict a general engine to one site. */
   site?: string;
-  /** False for engines that ignore time filters. */
-  time?: boolean;
 }
 
 export interface Source {
@@ -21,13 +15,12 @@ export interface Source {
   description: string;
   /** Yes/no question Jev answers to decide whether the request wants this source. */
   ask: { question: string; yes: string; no: string };
-  lanes: Lane[];
+  lane: Lane;
   /** Searched when the request does not single out any source. */
   defaultOn?: boolean;
 }
 
-const jina = (site?: string, type?: SearchType): Lane => ({ engine: 'jina', site, type });
-const s1 = (service: string, site?: string, time = true): Lane => ({ engine: 'search1api', service, site, time });
+const jina = (site?: string, type?: SearchType): Lane => ({ site, type });
 
 const WEB_ASK = {
   question: 'Would general web pages (news, articles, blogs, docs) help answer this request?',
@@ -40,7 +33,7 @@ export const SOURCES: readonly Source[] = [
     id: 'web',
     description: 'The open web: news sites, blogs, documentation',
     ask: WEB_ASK,
-    lanes: [jina(), s1('google'), s1('duckduckgo'), s1('yandex')],
+    lane: jina(),
     defaultOn: true,
   },
   {
@@ -51,7 +44,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request asks what happened, the latest news, an announcement or a launch',
       no: 'The request asks for opinions, how-tos, code, papers or background facts',
     },
-    lanes: [jina(undefined, 'news')],
+    lane: jina(undefined, 'news'),
   },
   {
     id: 'reddit',
@@ -61,7 +54,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request names Reddit or a subreddit, or asks what people are saying, their experiences, recommendations, opinions or discussion',
       no: 'The request is a factual lookup or asks for official sources, code, papers or videos',
     },
-    lanes: [jina('reddit.com'), s1('google', 'reddit.com'), s1('reddit')],
+    lane: jina('reddit.com'),
   },
   {
     id: 'hackernews',
@@ -71,7 +64,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request names Hacker News or HN, or asks what developers or the tech community are saying, their reactions, opinions or discussion about a technical topic',
       no: 'The request is a factual lookup, or is about something outside technology and startups',
     },
-    lanes: [jina('news.ycombinator.com'), s1('google', 'news.ycombinator.com'), s1('hackernews')],
+    lane: jina('news.ycombinator.com'),
   },
   {
     id: 'github',
@@ -81,7 +74,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request names GitHub, or asks for repos, libraries, releases, issues, PRs, or open source tools',
       no: 'The request is about discussion, news or opinions rather than code',
     },
-    lanes: [jina('github.com'), s1('google', 'github.com'), s1('github')],
+    lane: jina('github.com'),
   },
   {
     id: 'stackoverflow',
@@ -91,7 +84,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request contains an error message, or asks how to do a specific task in a language, library or tool',
       no: 'The request is not a programming problem',
     },
-    lanes: [jina('stackoverflow.com'), s1('google', 'stackoverflow.com')],
+    lane: jina('stackoverflow.com'),
   },
   {
     id: 'x',
@@ -101,7 +94,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request names X, Twitter or tweets, or asks what people are saying about a product, launch, announcement, company or person, especially in tech; launches and news break on X first',
       no: 'The request is a factual lookup, or asks for long-form content such as tutorials, papers or documentation',
     },
-    lanes: [jina('x.com'), s1('x')],
+    lane: jina('x.com'),
   },
   {
     id: 'youtube',
@@ -111,7 +104,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request mentions videos, YouTube, talks, tutorials to watch, or channels',
       no: 'The request is not about video content',
     },
-    lanes: [jina('youtube.com'), s1('youtube')],
+    lane: jina('youtube.com'),
   },
   {
     id: 'wikipedia',
@@ -121,7 +114,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request asks what or who something is, how it works, its history or background facts',
       no: 'The request asks for opinions, news, recent events, code, papers or videos',
     },
-    lanes: [jina('wikipedia.org'), s1('wikipedia', undefined, false)],
+    lane: jina('wikipedia.org'),
   },
   {
     id: 'arxiv',
@@ -131,7 +124,7 @@ export const SOURCES: readonly Source[] = [
       yes: 'The request mentions papers, research, arXiv, studies or preprints',
       no: 'The request is not about academic research',
     },
-    lanes: [jina(undefined, 'arxiv'), s1('arxiv')],
+    lane: jina(undefined, 'arxiv'),
   },
 ];
 
@@ -141,14 +134,9 @@ export function sourceById(id: string): Source | undefined {
   return SOURCES.find((s) => s.id === id);
 }
 
-/** Lanes to run for a source, given which engines have keys. */
-export function lanesFor(source: Source, search1api: boolean): Lane[] {
-  return source.lanes.filter((l) => l.engine === 'jina' || search1api);
-}
-
 const TRACKING = /^(utm_|ref$|ref_|fbclid|gclid|igshid|share_id|rdt|si$|feature$|lang$|s$|t$)/i;
 
-/** Host + path + content-identifying query params, so the same page from two engines merges. */
+/** Host + path + content-identifying query params, so the same page from two sources merges. */
 export function canonicalUrl(url: string): string {
   try {
     const u = new URL(url);

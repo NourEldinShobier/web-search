@@ -1,6 +1,6 @@
 {
   "name": "web-search",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Web search, news, papers, images and page/PDF reading for AI agents, as a CLI and a Claude Code plugin",
   "type": "module",
   "license": "MIT",
