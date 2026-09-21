@@ -1,6 +1,6 @@
 /** PreToolUse hook: send WebSearch/WebFetch to the web-search CLI instead. */
 
-const q = (s: string) => `"${s.replace(/["\\$`]/g, '\\$&')}"`;
+export const q = (s: string) => `"${s.replace(/["\\$`]/g, '\\$&')}"`;
 
 /** Returns the hook JSON to print, or null to let the tool call through. */
 export function decide(input: { tool_name?: string; tool_input?: Record<string, unknown> }): object | null {

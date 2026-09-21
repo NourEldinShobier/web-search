@@ -13,7 +13,7 @@ Agents spend a lot of their context on web pages. A typical docs or blog page is
 
 - **`--focus "question"`** keeps only the passages relevant to a question (local BM25 ranking), often 90%+ smaller than the full page.
 - **Link URLs are stripped** to their text by default, making pages about a quarter smaller.
-- **Pages are capped** at 4,000 tokens by default, with a note saying how much was cut.
+- **Pages are capped** at 4,000 tokens by default, without losing anything: the cut ends with the offset of the next part and a map of the remaining sections, so an agent can read on or jump to the part it needs (served from cache).
 - **Search results are reranked** and off-topic hits are dropped, so the agent reads fewer, better results.
 - **Everything is cached** locally (searches 1 hour, pages 24 hours), so repeated calls from parallel agents are free.
 

@@ -42,12 +42,32 @@ Reads web pages or PDFs and prints them as markdown. Several URLs are read in pa
 |---|---|---|
 | `--focus "question"` | | Keep only the passages relevant to the question |
 | `--max-tokens N` | 4000 | Cap per page; `0` means no limit |
+| `--offset N` | 0 | Start at character N of the page. Takes precedence over `--focus`. |
 | `--selector css` | | Only return this part of the page, e.g. `main`, `article` |
 | `--remove css` | | Drop these parts, e.g. `nav,footer,.ads` |
 | `--links` | | Keep link URLs inline and append a list of the page's links |
 | `--images` | | Append a list of the page's images |
 | `--engine browser\|curl\|auto` | auto | `browser` renders JavaScript (slower); `curl` is fastest |
 | `--timeout S` | 30 | Seconds to wait for the page |
+
+#### Long pages: nothing is lost
+
+When a page is longer than `--max-tokens`, the output ends with a note like this:
+
+```
+[shown: ~736 tokens, up to 1% of a ~74560-token page. Nothing is lost:
+  next part: web-search read "https://bun.com/blog/bun-v1.4" --offset 2941
+  remaining sections (jump with its --offset):
+  Production# → --offset 4049
+  We rewrote Bun in Rust# → --offset 13952
+  Security# → --offset 49200
+  ...
+  or narrow it: --focus "<question>" · everything at once: --max-tokens 0]
+```
+
+The agent can read on in order, jump to a section, or narrow with `--focus`. Every follow-up is served from the local cache, so it's fast and fetches nothing new. The "next part" command repeats any `--selector`, `--remove`, `--links`, `--images` or `--engine` option you used, because offsets refer to the text those options produced.
+
+With `--focus`, each heading shown carries its offset (`## Security  (--offset 49200)`), so the full section around any passage is one call away.
 
 ### `screenshot <url>`
 

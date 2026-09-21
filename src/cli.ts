@@ -5,7 +5,7 @@ import { ApiError, read, screenshot, search, type Page, type SearchItem, type Se
 import { focus, truncate } from './focus';
 import { cached } from './cache';
 import { keepRelevant, rerank } from './rerank';
-import { decide } from './hook';
+import { decide, q } from './hook';
 
 const HELP = `web-search — web search and page reading for AI agents (Jina Search, Reader and Reranker)
 
@@ -29,6 +29,8 @@ Search options:
 Read options (URLs can also come from stdin, one per line):
   --focus "q"        keep only the passages relevant to q (big token saver)
   --max-tokens N     per page, default 4000 (1500 with search --read); 0 = no limit
+  --offset N         start at character N; long pages end with the next offset
+                     and a list of remaining sections, so nothing is out of reach
   --selector css     only this part of the page; --remove css drops parts
   --links, --images  append link / image lists
   --engine browser   render JavaScript-heavy pages (slower); curl = fastest
@@ -95,7 +97,23 @@ async function readPage(url: string, v: Values, focusQuery: string | undefined, 
   };
   const key = `p|${url}|${opts.selector}|${opts.remove}|${opts.links}|${opts.images}|${opts.engine}`;
   const page = await cached(key, 24 * HOUR, opts.fresh, () => read(url, opts));
-  const content = focusQuery ? focus(page.content ?? '', focusQuery, maxTokens) : truncate(page.content ?? '', maxTokens);
+
+  // Offsets refer to this exact text, so the follow-up command repeats every option that shapes it.
+  const readCmd = [
+    `web-search read ${q(url)}`,
+    opts.selector && `--selector ${q(opts.selector)}`,
+    opts.remove && `--remove ${q(opts.remove)}`,
+    opts.links && '--links',
+    opts.images && '--images',
+    opts.engine && `--engine ${opts.engine}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const md = page.content ?? '';
+  const offset = v.offset === undefined ? undefined : int(v.offset, 0);
+  // An explicit --offset means "read in order from here", so it takes precedence over --focus.
+  const content =
+    focusQuery && offset === undefined ? focus(md, focusQuery, maxTokens, readCmd) : truncate(md, maxTokens, offset, readCmd);
   return { ...page, content };
 }
 
@@ -223,6 +241,7 @@ async function main(argv: string[]) {
       'no-rerank': { type: 'boolean' },
       focus: { type: 'string' },
       'max-tokens': { type: 'string' },
+      offset: { type: 'string' },
       selector: { type: 'string' },
       remove: { type: 'string' },
       links: { type: 'boolean' },

@@ -40,7 +40,13 @@ The page is split into blocks at blank lines. Each heading is attached to the bl
 
 It runs locally in a few milliseconds and costs no API calls. It is keyword matching, not semantic search: phrase the focus with words likely to appear on the page.
 
+Words joined by dots or dashes are also matched by their parts, so `webview` finds `Bun.WebView`.
+
 Tokens are estimated as characters ÷ 4.
+
+## Token cap and paging
+
+Without `--focus`, a page longer than the cap is cut at the last paragraph break before the cap (or exactly at the cap if there is no break in its second half). Nothing is thrown away: the output ends with the exact character offset where the next part starts, plus a map of the remaining headings and their offsets. The map uses the deepest heading level that fits in 12 entries, so it spans the whole page instead of listing the first few subsections. `--offset N` returns the page from character N, served from the cached full text. A test pages through a long document using only the offsets the tool prints and checks that every block comes back exactly once.
 
 ## Cache
 

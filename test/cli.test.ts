@@ -32,21 +32,49 @@ describe('focus', () => {
     expect(out).toContain('[focus: kept 1 of 4 blocks');
   });
 
+  test('matches parts of dotted names', () => {
+    const doc = ['Intro text.', '## API', 'Use Bun.WebView to take screenshots.', 'Other stuff.'].join('\n\n');
+    expect(focus(doc, 'webview', 100)).toContain('Bun.WebView');
+  });
+
   test('falls back to truncation when nothing matches', () => {
     expect(focus(page, 'kubernetes', 1000)).toBe(page);
   });
 
   test('respects the token budget', () => {
     const long = Array.from({ length: 50 }, (_, i) => `Block ${i} mentions rust and bun.`).join('\n\n');
-    expect(estimateTokens(focus(long, 'rust', 40))).toBeLessThan(80);
+    const content = focus(long, 'rust', 40).replace(/\n\n\[focus:[\s\S]*$/, '');
+    expect(estimateTokens(content)).toBeLessThan(60);
   });
 });
 
 describe('truncate', () => {
   test('leaves short text alone and marks cut text', () => {
     expect(truncate('short', 100)).toBe('short');
-    expect(truncate('x'.repeat(1000), 10)).toContain('[truncated:');
+    expect(truncate('x'.repeat(1000), 10)).toContain('--offset 40');
     expect(truncate('x'.repeat(1000), 0)).toHaveLength(1000);
+  });
+
+  test('paging with the offsets it prints loses no text', () => {
+    const doc = Array.from({ length: 60 }, (_, i) => (i % 10 === 0 ? `## Section ${i}` : `Paragraph ${i} ${'word '.repeat(i % 7 + 3)}`)).join('\n\n');
+    const seen: string[] = [];
+    let offset: number | undefined = 0;
+    for (let guard = 0; offset !== undefined && guard < 100; guard++) {
+      const page = truncate(doc, 60, offset);
+      const next = page.match(/next part: .* --offset (\d+)/)?.[1];
+      seen.push(page.replace(/^\[continuing[^\]]*\]\n\n/, '').replace(/\n\n\[shown:[\s\S]*$/, ''));
+      offset = next === undefined ? undefined : Number(next);
+    }
+    const blocks = (s: string) => s.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+    expect(blocks(seen.join('\n\n'))).toEqual(blocks(doc));
+  });
+
+  test('lists remaining sections with offsets that land on them', () => {
+    const doc = ['intro '.repeat(100), '## Alpha', 'a', '## Beta', 'b'].join('\n\n');
+    const page = truncate(doc, 50);
+    const off = Number(page.match(/Beta → --offset (\d+)/)![1]);
+    expect(doc.slice(off).startsWith('## Beta')).toBe(true);
+    expect(truncate(doc, 50, off)).toContain('## Beta\n\nb');
   });
 });
 

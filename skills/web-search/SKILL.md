@@ -30,7 +30,7 @@ Run through Bash. Results are cached (searches 1h, pages 24h), so repeating a ca
 
 1. Search first (5 results, about 400 tokens). Read only the 1–3 results that matter.
 2. Always pass `--focus "<question>"` to `read`. It keeps only the relevant passages, often 90%+ fewer tokens than the full page.
-3. Default page cap is 4000 tokens. Use `--max-tokens 1500` for quick checks; `--max-tokens 0` only when you need the whole page.
+3. Default page cap is 4000 tokens. Nothing is lost when a page is cut: the note at the end gives the exact `--offset` for the next part and a map of the remaining sections with their offsets. Need more? Jump to the section you want (`read <url> --offset N`) or read on in order; both come from the cache, so they're fast. Focused output shows each heading's `--offset` too, so you can read a whole section around a passage. Use `--max-tokens 0` only when you truly need the whole page at once.
 4. Narrow big pages with `--selector "main"` or `--remove "nav,footer"`.
 5. Read several URLs in one call; they run in parallel: `web-search read <url1> <url2> --focus "..."`.
 6. Pipe: `web-search search "query" --urls | web-search read --focus "..."`.
