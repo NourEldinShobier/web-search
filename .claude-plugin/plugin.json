@@ -1,10 +1,19 @@
 {
   "name": "web-search",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Web, news, paper and image search plus page/PDF reading through a fast Bun CLI built on Jina Search, Reader and Reranker, plus a Sonnet research agent that reports back. Replaces WebSearch/WebFetch with cached, token-trimmed output.",
-  "author": { "name": "Nour Eldin Shobier", "url": "https://github.com/NourEldinShobier" },
+  "author": {
+    "name": "Nour Eldin Shobier",
+    "url": "https://github.com/NourEldinShobier"
+  },
   "repository": "https://github.com/NourEldinShobier/web-search",
   "license": "MIT",
-  "keywords": ["search", "web", "crawl", "reader", "jina", "research"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": [
+    "search",
+    "web",
+    "crawl",
+    "reader",
+    "jina",
+    "research"
+  ]
 }

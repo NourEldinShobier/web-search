@@ -1,10 +1,12 @@
 {
   "name": "web-search",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Web search, news, papers, images and page/PDF reading for AI agents, as a CLI and a Claude Code plugin",
   "type": "module",
   "license": "MIT",
-  "bin": { "web-search": "src/cli.ts" },
+  "bin": {
+    "web-search": "src/cli.ts"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit"
