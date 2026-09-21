@@ -22,6 +22,8 @@ A small [Bun](https://bun.sh) CLI plus a [Claude Code](https://code.claude.com) 
 
 That's it. Claude now searches with web-search whenever it needs the web.
 
+**Optional, for smarter search:** add a [TypeSafe](https://typesafe.ai) key as `TYPESAFE_API_KEY`. Its Jev model reads each question, picks where to look (Reddit, GitHub, Stack Overflow, arXiv…) and how recent results must be, and drops off-topic results. It adds about half a second.
+
 **Check it works:** in a new session, type `/web-search:web-search bun 1.4 release notes`.
 
 ## Why use it
@@ -30,7 +32,8 @@ A typical web page is 20,000–100,000 tokens, and most of that is menus and lin
 
 - **Focus:** `--focus "question"` keeps only the relevant passages, often 90% smaller.
 - **Cap:** pages stop at 4,000 tokens, and the end of the output says where to read on. Nothing is lost.
-- **Better results:** search results are reranked and off-topic hits are dropped.
+- **Many sources at once:** the web, news, Reddit, Hacker News, GitHub, Stack Overflow, X, YouTube, Wikipedia and arXiv, merged by URL. Pages found by several engines rank higher.
+- **Better results:** off-topic hits are dropped (by Jev if you have a TypeSafe key, otherwise Jina Reranker).
 - **Cache:** repeat calls are free (searches are kept 1 hour, pages 24 hours).
 - **Speed:** about 75 ms to start, 1–2 s per search, under 1 s per page.
 
@@ -58,6 +61,7 @@ web-search search "bun sqlite" --urls | web-search read --focus "WAL mode"
 ```bash
 web-search search "rust async runtimes"
 web-search search "claude code plugins" --time w --read 2   # past week, read top 2
+web-search search "framework laptop 16" --sources reddit,youtube   # pick the sources yourself
 web-search news "open source llm" -n 3
 web-search papers "speculative decoding"
 ```
@@ -84,6 +88,14 @@ web-search read https://bun.com/blog/bun-v1.4 --offset 49200
 - A **hook** that sends `WebSearch` and `WebFetch` calls to web-search instead. Set `WEB_SEARCH_ALLOW_BUILTIN=1` to turn this off.
 
 Details: [docs/claude-code.md](docs/claude-code.md).
+
+## API keys
+
+| Key | Needed? | What it adds |
+|---|---|---|
+| `JINA_API_KEY` | Yes | Search, reading, reranking ([free key](https://jina.ai/?sui=apikey)) |
+| `TYPESAFE_API_KEY` | Optional | Jev picks sources, time window and query, and judges which results are on topic ([typesafe.ai](https://typesafe.ai)) |
+| `SEARCH1API_API_KEY` | Optional | More engines per source: Google, DuckDuckGo, Yandex, plus Reddit's, GitHub's, YouTube's and other sites' own search ([search1api.com](https://www.search1api.com)) |
 
 ## Use it without Claude Code
 
@@ -117,7 +129,8 @@ web-search --help
 
 - Built on [Jina AI](https://jina.ai)'s Reader, Search and Reranker APIs. Request options follow [jina-ai/reader](https://github.com/jina-ai/reader) and [jina-ai/MCP](https://github.com/jina-ai/MCP).
 - Command design borrows from [jina-ai/cli](https://github.com/jina-ai/cli).
-- The search-then-rerank design comes from [superagents-lab/jev-search](https://github.com/superagents-lab/jev-search) (MIT, Copyright (c) 2026 Search1API).
+- Multi-source search, the Jev questions, query candidates and the Search1API client are adapted from [superagents-lab/jev-search](https://github.com/superagents-lab/jev-search) (MIT, Copyright (c) 2026 Search1API).
+- Jev by [TypeSafe](https://typesafe.ai).
 
 ## License
 

@@ -98,3 +98,33 @@ describe('hook', () => {
     expect(decide({ tool_name: 'Bash', tool_input: {} })).toBeNull();
   });
 });
+
+import { merge, parseSources, pickSources } from '../src/multi';
+import { buildCandidates } from '../src/candidates';
+
+describe('multi-source search', () => {
+  test('merges the same page from two engines and ranks agreement first', () => {
+    const hits = merge([
+      { source: 'web', items: [{ title: 'A', url: 'https://a.com/x' }, { title: 'B', url: 'https://www.b.com/y/?utm_source=z' }] },
+      { source: 'reddit', items: [{ title: 'B', url: 'https://b.com/y', description: 'longer snippet' }] },
+    ]);
+    expect(hits.map((h) => h.url)).toEqual(['https://www.b.com/y/?utm_source=z', 'https://a.com/x']);
+    expect(hits[0]).toMatchObject({ sources: ['web', 'reddit'], engines: 2, position: 1, description: 'longer snippet' });
+  });
+
+  test('Jev source probabilities: specific sources win, web only when also wanted', () => {
+    expect(pickSources({ web: 0.2, reddit: 0.9 })).toEqual(['reddit']);
+    expect(pickSources({ web: 0.8, reddit: 0.9, github: 0.7 })).toEqual(['web', 'reddit', 'github']);
+    expect(pickSources({ web: 0.3 })).toEqual(['web']);
+  });
+
+  test('--sources validates names', () => {
+    expect(parseSources('Reddit, github,reddit')).toEqual(['reddit', 'github']);
+    expect(() => parseSources('myspace')).toThrow(/unknown source "myspace"/);
+    expect(parseSources('all')).toContain('arxiv');
+  });
+
+  test('query candidates drop time and source words', () => {
+    expect(buildCandidates('what are people saying about bun 1.4 on reddit this week')).toContain('bun 1.4');
+  });
+});

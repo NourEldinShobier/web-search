@@ -3,7 +3,8 @@
 ## Pipeline
 
 ```
-search:  query ─► svip.jina.ai (SERP) ─► Jina Reranker ─► drop off-topic ─► top N ─► [read top K]
+search:  query ─► [Jev: sources, window, query] ─► every source's engines in parallel ─► merge by URL
+               ─► Jev or Jina Reranker ─► drop off-topic ─► top N ─► [read top K]
 read:    url   ─► r.jina.ai (markdown) ─► --focus (BM25) or token cap ─► output
                         ▲
                  local SQLite cache (search 1h, news 15m, pages 24h)
@@ -14,17 +15,30 @@ read:    url   ─► r.jina.ai (markdown) ─► --focus (BM25) or token cap �
 | `src/cli.ts` | Argument parsing, commands, output formatting |
 | `src/jina.ts` | Jina Search (`svip.jina.ai`), Reader (`r.jina.ai`) and screenshot client, with one retry on dropped connections, 5xx and 429 |
 | `src/rerank.ts` | Jina Reranker call and the relevance cutoff |
+| `src/sources.ts` | The sources and the engine lanes behind each |
+| `src/multi.ts` | Planning, parallel lanes, merging by URL |
+| `src/jev.ts` | TypeSafe Jev: reading the request and judging relevance |
+| `src/candidates.ts` | Keyword-query candidates Jev chooses between |
+| `src/search1api.ts` | Optional Search1API engines |
 | `src/focus.ts` | `--focus` passage selection and token-cap truncation |
 | `src/cache.ts` | SQLite cache using Bun's built-in `bun:sqlite` |
 | `src/hook.ts` | The Claude Code `PreToolUse` redirect |
 
-There are no runtime dependencies beyond Bun.
+There are no runtime dependencies beyond Bun. Source list, Jev questions, candidates and the Search1API request shape are adapted from [jev-search](https://github.com/superagents-lab/jev-search) (MIT).
 
 ## Search
 
 Search posts to `svip.jina.ai`, which returns search-engine results (title, URL, snippet, date) without visiting each page. The same endpoint handles web, news, images, arXiv and SSRN through `type` and `domain` fields, and time filters through `tbs`. In our tests it answered in about 1.1–1.3 s, against about 2.5 s for `s.jina.ai`, which also crawls every result.
 
 When reranking is on (the default for everything except images), the CLI fetches twice as many results as requested, scores each title and snippet against the query with `jina-reranker-v2-base-multilingual` (about 250 ms), and keeps results scoring at least half the best score (and at least 0.3), best first. The cutoff is relative so that broad queries with many good hits keep them. If reranking fails, the unranked results are used and a warning goes to stderr.
+
+## Sources and Jev
+
+Each source is one or more engine lanes: `reddit` is a Jina search restricted to `reddit.com`, plus Google restricted to Reddit and Reddit's own search when `SEARCH1API_API_KEY` is set. All lanes run at once; a failed lane prints a warning and the rest still count.
+
+With `TYPESAFE_API_KEY`, one Jev call answers a yes/no question per source ("Would Reddit threads fit this request?"), picks a time window, and chooses the best keyword query from candidates built by stripping time, source and filler words from the request. Sources scoring 0.6 or more are searched; if none do, `web` is. The plain web search starts while Jev is thinking and is reused when the plan keeps it. After merging, a second Jev call asks of each result whether it is about what was asked; results under half the best score are dropped. Jev returns typed answers in 70–500 ms, so a planned multi-source search takes about 2 s cold and 0.25 s cached.
+
+Results are merged by canonical URL (lowercased host and path, tracking parameters removed). Equal relevance scores are broken by how many engines returned the page, then by its best rank.
 
 ## Reading
 

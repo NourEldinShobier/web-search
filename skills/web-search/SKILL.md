@@ -18,7 +18,8 @@ Run through Bash. Results are cached (searches 1h, pages 24h), so repeating a ca
 
 | Need | Command |
 |---|---|
-| Find sources | `web-search search "query"` |
+| Find sources | `web-search search "query"` (with a TypeSafe key, Jev picks the sources) |
+| Opinions, code, videos, Q&A | `search "query" --sources reddit,hackernews` (also `github`, `stackoverflow`, `x`, `youtube`, `wikipedia`, `arxiv`, `news`, `web`) |
 | Recent events | `web-search news "query"` or `search "query" --time w` (d, w, m, y) |
 | Papers | `web-search papers "query"` (`--source ssrn` for SSRN) |
 | Images | `web-search images "query"` |

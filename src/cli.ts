@@ -1,16 +1,19 @@
 #!/usr/bin/env bun
 /** web-search: search the web and read pages as compact markdown, built for AI agents. */
 import { parseArgs } from 'node:util';
-import { ApiError, read, screenshot, search, type Page, type SearchItem, type SearchOptions, type SearchType } from './jina';
+import { ApiError, read, screenshot, type Page, type SearchType } from './jina';
 import { focus, truncate } from './focus';
 import { cached } from './cache';
 import { keepRelevant, rerank } from './rerank';
 import { decide, q } from './hook';
+import { gather, parseSources, plan, runLane, webLane, type Hit, type Plan, type Time } from './multi';
+import { buildCandidates } from './candidates';
+import { jevKey, relevance } from './jev';
 
-const HELP = `web-search — web search and page reading for AI agents (Jina Search, Reader and Reranker)
+const HELP = `web-search — web search and page reading for AI agents
 
 Usage:
-  web-search search <query> [-n 5] [--time d|w|m|y] [--site host] [--read K]
+  web-search search <query> [-n 5] [--sources reddit,github|all] [--time d|w|m|y] [--read K]
   web-search news <query>   [same options as search]
   web-search papers <query> [--source arxiv|ssrn] [-n 5]
   web-search images <query> [-n 5]
@@ -20,6 +23,9 @@ Pages and PDFs both work with read.
 
 Search options:
   -n, --num N        results to show (default 5)
+  --sources list     where to look: web, news, reddit, hackernews, github, stackoverflow,
+                     x, youtube, wikipedia, arxiv, or all. Default: web, or with
+                     TYPESAFE_API_KEY, Jev picks sources, time window and query
   --time d|w|m|y     only results from the past day, week, month or year
   --read K           also read the top K results, focused on the query
   --urls             print only URLs, one per line (pipe into "web-search read")
@@ -37,7 +43,10 @@ Read options (URLs can also come from stdin, one per line):
   --timeout S        seconds, default 30
 
 Common: --json (structured output), --fresh (skip the 1h/24h cache), -h, --help
-Env: JINA_API_KEY (needed for search; raises read limits), WEB_SEARCH_CACHE_DIR (default ~/.cache/web-search)
+Env: JINA_API_KEY (needed for search; raises read limits)
+     TYPESAFE_API_KEY (optional: Jev picks sources and judges relevance)
+     SEARCH1API_API_KEY (optional: adds Google, DuckDuckGo, Yandex and each site's own engine)
+     WEB_SEARCH_CACHE_DIR (default ~/.cache/web-search)
 Exit codes: 0 ok, 1 usage error, 2 API/network error`;
 
 class UsageError extends Error {}
@@ -131,7 +140,7 @@ function formatPage(p: Page): string {
   return lines.join('\n');
 }
 
-function formatResults(items: SearchItem[], type: SearchType): string {
+function formatResults(items: Hit[], type: SearchType, tagSources = false): string {
   if (!items.length) return 'No results.';
   return items
     .map((it, i) => {
@@ -139,11 +148,38 @@ function formatResults(items: SearchItem[], type: SearchType): string {
         const size = it.imageWidth ? ` — ${it.imageWidth}x${it.imageHeight}` : '';
         return `${i + 1}. ${clip(it.title, 120)}${size}\n   image: ${it.imageUrl}\n   page: ${it.url}`;
       }
-      const meta = [host(it.url), it.date].filter(Boolean).join(' · ');
+      const meta = [host(it.url), it.date, tagSources && `via ${it.sources.join('+')}`].filter(Boolean).join(' · ');
       const snippet = clip(it.description);
       return `${i + 1}. ${clip(it.title, 120)} — ${meta}\n   ${it.url}${snippet ? `\n   ${snippet}` : ''}`;
     })
     .join('\n');
+}
+
+/** Relevance per hit: Jev when TYPESAFE_API_KEY is set, else Jina Reranker. */
+async function score(request: string, hits: Hit[], fresh: boolean): Promise<number[]> {
+  const urls = hits.map((h) => h.url).join(' ');
+  if (jevKey()) {
+    try {
+      return await cached(`j|${request}|${urls}`, HOUR, fresh, () =>
+        relevance(request, hits.map((h) => ({ source: h.sources.join('+'), title: h.title, snippet: h.description ?? '' })))
+      );
+    } catch (e) {
+      warn(`Jev rerank failed, using Jina Reranker: ${(e as Error).message}`);
+    }
+  }
+  return cached(`r|${request}|${urls}`, HOUR, fresh, () =>
+    rerank(request, hits.map((h) => `${h.title}\n${h.description ?? ''}`), process.env.JINA_API_KEY!)
+  );
+}
+
+const WINDOW_LABEL: Record<Time, string> = { d: 'past day', w: 'past week', m: 'past month', y: 'past year' };
+
+function planLine(p: Plan, request: string): string {
+  const parts = [`searched ${p.sources.map((s) => s.replace(/^site:/, '')).join(', ')}`];
+  if (p.time) parts.push(WINDOW_LABEL[p.time]);
+  if (p.query !== request) parts.push(`query "${p.query}"`);
+  if (p.by === 'jev') parts.push('chosen by Jev');
+  return `[${parts.join(' · ')}]`;
 }
 
 async function cmdSearch(type: SearchType, query: string, v: Values) {
@@ -153,25 +189,31 @@ async function cmdSearch(type: SearchType, query: string, v: Values) {
   const useRerank = type !== 'images' && !v['no-rerank'];
   const fetchN = useRerank ? Math.min(20, n * 2) : Math.min(20, n);
   const fresh = Boolean(v.fresh);
-  const time = v.time as SearchOptions['time'];
+  const time = v.time as Time | undefined;
   if (time && !['d', 'w', 'm', 'y'].includes(time)) throw new UsageError('--time must be d, w, m or y');
-  const opts: SearchOptions = { type, num: fetchN, site: v.site as string, gl: v.gl as string, hl: v.hl as string, time };
+  if (v.sources && type !== 'web') throw new UsageError('--sources works with search only');
+  let sources: string[] | undefined;
+  try {
+    sources = v.sources ? parseSources(String(v.sources)) : undefined;
+  } catch (e) {
+    throw new UsageError((e as Error).message);
+  }
+  const site = v.site as string | undefined;
 
-  let items = await cached(`s|${JSON.stringify([query, opts])}`, type === 'news' ? HOUR / 4 : HOUR, fresh, () =>
-    search(query, opts)
-  );
+  // Start the plain web search while Jev reads the request; reused if the plan agrees.
+  if (type === 'web' && !sources && !site && jevKey()) runLane(webLane(), buildCandidates(query)[0] ?? query, time, fetchN, fresh).catch(() => {});
+  const p = await plan(type, query, { sources, time, site, fresh }, warn);
+  let items: Hit[] = await gather(p, fetchN, fresh, warn);
 
   if (useRerank && items.length > 1) {
     try {
-      const scores = await cached(`r|${query}|${items.map((i) => i.url).join(' ')}`, HOUR, fresh, () =>
-        rerank(query, items.map((i) => `${i.title}\n${i.description ?? ''}`), process.env.JINA_API_KEY!)
-      );
-      items = keepRelevant(items, scores);
+      items = keepRelevant(items, await score(query, items, fresh));
     } catch (e) {
       warn(`rerank skipped: ${(e as Error).message}`);
     }
   }
   items = items.slice(0, n);
+  const showPlan = p.by === 'jev' || p.sources.length > 1;
 
   const readK = type === 'images' ? 0 : int(v.read, 0);
   const pages = readK
@@ -179,14 +221,15 @@ async function cmdSearch(type: SearchType, query: string, v: Values) {
     : [];
 
   if (v.json) {
-    const read = pages.map((p, i) => (p.status === 'fulfilled' ? p.value : { url: items[i]!.url, error: String((p.reason as Error).message) }));
-    out(JSON.stringify({ query, type, results: items, ...(readK ? { pages: read } : {}) }));
+    const read = pages.map((pg, i) => (pg.status === 'fulfilled' ? pg.value : { url: items[i]!.url, error: String((pg.reason as Error).message) }));
+    out(JSON.stringify({ query, type, plan: p, results: items, ...(readK ? { pages: read } : {}) }));
   } else if (v.urls) {
     out(items.map((i) => i.url).join('\n'));
   } else {
-    out(formatResults(items, type));
-    pages.forEach((p, i) =>
-      out(`\n---\n\n${p.status === 'fulfilled' ? formatPage(p.value) : `# ${items[i]!.url}\n[read failed: ${(p.reason as Error).message}]`}`)
+    if (showPlan) out(planLine(p, query));
+    out(formatResults(items, type, p.sources.length > 1));
+    pages.forEach((pg, i) =>
+      out(`\n---\n\n${pg.status === 'fulfilled' ? formatPage(pg.value) : `# ${items[i]!.url}\n[read failed: ${(pg.reason as Error).message}]`}`)
     );
   }
 }
@@ -236,6 +279,7 @@ async function main(argv: string[]) {
       hl: { type: 'string' },
       time: { type: 'string' },
       source: { type: 'string' },
+      sources: { type: 'string' },
       read: { type: 'string' },
       urls: { type: 'boolean' },
       'no-rerank': { type: 'boolean' },

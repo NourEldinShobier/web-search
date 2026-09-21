@@ -13,6 +13,7 @@ Web search. Prints the top results with title, site, date, URL and a short snipp
 | Option | Default | Meaning |
 |---|---|---|
 | `-n, --num N` | 5 | Results to show (max 20) |
+| `--sources list` | see below | Where to look, comma-separated: `web`, `news`, `reddit`, `hackernews`, `github`, `stackoverflow`, `x`, `youtube`, `wikipedia`, `arxiv`, or `all` |
 | `--time d\|w\|m\|y` | any | Only results from the past day, week, month or year |
 | `--site host` | | Restrict to one site, e.g. `--site github.com` |
 | `--gl code` | | Country, e.g. `us`, `de` |
@@ -21,6 +22,16 @@ Web search. Prints the top results with title, site, date, URL and a short snipp
 | `--max-tokens N` | 1500 | Per-page cap when using `--read` |
 | `--urls` | | Print only URLs, one per line (for piping into `read`) |
 | `--no-rerank` | | Keep all results instead of dropping off-topic ones |
+
+#### Sources
+
+Without `--sources`, `search` looks at `web`. With `TYPESAFE_API_KEY` set, Jev reads the query instead and picks the sources, the time window and a cleaner keyword query; the first line of the output says what it chose:
+
+```
+[searched reddit · past month · query "what do people think of the framework laptop 16" · chosen by Jev]
+```
+
+All sources run in parallel and results are merged by URL. Each result says which sources found it (`via web+github`); a page found by more engines ranks higher among equally relevant results. An explicit `--sources` or `--time` overrides Jev's choice. With `SEARCH1API_API_KEY` set, each source also queries more engines (for example Google, DuckDuckGo and Yandex for `web`, and Reddit's own search for `reddit`).
 
 ### `news <query>`
 
@@ -86,6 +97,8 @@ Prints a temporary URL of a screenshot of the page. `--full` captures the full p
 | Variable | Meaning |
 |---|---|
 | `JINA_API_KEY` | Jina key. Required for `search`, `news`, `papers`, `images` and reranking; raises rate limits for `read`. |
+| `TYPESAFE_API_KEY` | Optional. Jev picks sources, time window and query for `search`, and judges relevance for all searches except images. |
+| `SEARCH1API_API_KEY` | Optional. Adds Search1API engines to each source. |
 | `WEB_SEARCH_CACHE_DIR` | Where the cache database lives. Default `~/.cache/web-search`. |
 | `WEB_SEARCH_ALLOW_BUILTIN` | Set to `1` to stop the Claude Code hook redirecting `WebSearch`/`WebFetch`. |
 
@@ -105,7 +118,8 @@ Prints a temporary URL of a screenshot of the page. `--full` captures the full p
 {
   "query": "bun 1.4",
   "type": "web",
-  "results": [{ "title": "...", "url": "...", "description": "...", "date": "Aug 20, 2026" }],
+  "plan": { "query": "bun 1.4", "sources": ["web", "github"], "by": "jev" },
+  "results": [{ "title": "...", "url": "...", "description": "...", "date": "Aug 20, 2026", "sources": ["web", "github"], "engines": 2, "position": 1 }],
   "pages": [{ "title": "...", "url": "...", "content": "..." }]
 }
 ```
