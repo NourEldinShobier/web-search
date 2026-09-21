@@ -112,7 +112,9 @@ Issues and pull requests are welcome. Keep changes small, add a test for new log
 
 ## Credits
 
-Built on [Jina AI](https://jina.ai)'s Reader, Search and Reranker APIs. Command design borrows from [jina-ai/cli](https://github.com/jina-ai/cli).
+- Built on [Jina AI](https://jina.ai)'s Reader, Search and Reranker APIs. Request options follow [jina-ai/reader](https://github.com/jina-ai/reader) and [jina-ai/MCP](https://github.com/jina-ai/MCP).
+- Command design borrows from [jina-ai/cli](https://github.com/jina-ai/cli).
+- Parts of the search client are adapted from [superagents-lab/jev-search](https://github.com/superagents-lab/jev-search) (MIT, Copyright (c) 2026 Search1API).
 
 ## License
 
