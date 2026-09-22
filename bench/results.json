@@ -1,0 +1,173 @@
+{
+  "date": "2026-09-22",
+  "questions": [
+    "What port does PostgreSQL listen on by default?",
+    "Who created the Rust programming language?",
+    "What does WAL stand for in SQLite WAL mode?",
+    "Which HTTP status code means Too Many Requests?",
+    "Which PEP makes the Python GIL optional?",
+    "Who are the authors of the paper Attention Is All You Need?",
+    "What changed in Bun 1.4?",
+    "How do I clean up a subscription in React useEffect?",
+    "What do people on Reddit think of the Framework Laptop 16?",
+    "How to fix TypeError: Cannot read properties of undefined (reading map) in React"
+  ],
+  "results": {
+    "Jina directly": [
+      {
+        "tokens": 48078,
+        "ms": 3410,
+        "found": true
+      },
+      {
+        "tokens": 94645,
+        "ms": 3641,
+        "found": true
+      },
+      {
+        "tokens": 38282,
+        "ms": 10154,
+        "found": true
+      },
+      {
+        "tokens": 85352,
+        "ms": 3062,
+        "found": true
+      },
+      {
+        "tokens": 157332,
+        "ms": 21101,
+        "found": true
+      },
+      {
+        "tokens": 52237,
+        "ms": 2861,
+        "found": true
+      },
+      {
+        "tokens": 171361,
+        "ms": 3596,
+        "found": true
+      },
+      {
+        "tokens": 62867,
+        "ms": 9486,
+        "found": true
+      },
+      {
+        "tokens": 26904,
+        "ms": 15164,
+        "found": true
+      },
+      {
+        "tokens": 34750,
+        "ms": 12385,
+        "found": true
+      }
+    ],
+    "web-search, Jina only": [
+      {
+        "tokens": 3717,
+        "ms": 2623,
+        "found": true
+      },
+      {
+        "tokens": 2651,
+        "ms": 2263,
+        "found": true
+      },
+      {
+        "tokens": 3596,
+        "ms": 2061,
+        "found": true
+      },
+      {
+        "tokens": 3564,
+        "ms": 1829,
+        "found": true
+      },
+      {
+        "tokens": 3963,
+        "ms": 3193,
+        "found": true
+      },
+      {
+        "tokens": 1250,
+        "ms": 3221,
+        "found": true
+      },
+      {
+        "tokens": 3593,
+        "ms": 4111,
+        "found": true
+      },
+      {
+        "tokens": 3693,
+        "ms": 2090,
+        "found": true
+      },
+      {
+        "tokens": 3769,
+        "ms": 2753,
+        "found": true
+      },
+      {
+        "tokens": 1974,
+        "ms": 2083,
+        "found": true
+      }
+    ],
+    "web-search + Jev": [
+      {
+        "tokens": 3817,
+        "ms": 5222,
+        "found": true
+      },
+      {
+        "tokens": 3057,
+        "ms": 2930,
+        "found": true
+      },
+      {
+        "tokens": 3644,
+        "ms": 2419,
+        "found": true
+      },
+      {
+        "tokens": 2839,
+        "ms": 41410,
+        "found": true
+      },
+      {
+        "tokens": 3822,
+        "ms": 2875,
+        "found": true
+      },
+      {
+        "tokens": 3674,
+        "ms": 3953,
+        "found": true
+      },
+      {
+        "tokens": 2951,
+        "ms": 4665,
+        "found": true
+      },
+      {
+        "tokens": 3684,
+        "ms": 8094,
+        "found": true
+      },
+      {
+        "tokens": 1981,
+        "ms": 15392,
+        "found": true
+      },
+      {
+        "tokens": 3761,
+        "ms": 12764,
+        "found": true
+      }
+    ]
+  }
+}

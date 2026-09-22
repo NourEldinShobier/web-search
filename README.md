@@ -22,7 +22,7 @@ A small [Bun](https://bun.sh) CLI plus a [Claude Code](https://code.claude.com) 
 
 That's it. Claude now searches with web-search whenever it needs the web.
 
-**Optional, for smarter search:** add a [TypeSafe](https://typesafe.ai) key as `TYPESAFE_API_KEY`. Its Jev model reads each question, picks where to look (Reddit, GitHub, Stack Overflow, arXiv…) and how recent results must be, and drops off-topic results. It adds about half a second.
+**Optional, for smarter search:** add a [TypeSafe](https://typesafe.ai) key as `TYPESAFE_API_KEY`. Its Jev model reads each question, picks where to look (Reddit, GitHub, Stack Overflow, arXiv…) and how recent results must be, and drops off-topic results. In the benchmark below it did not save tokens and added about 2.5 s, so it is best for opinion, code and recent-news questions where picking the right source matters.
 
 **Check it works:** in a new session, type `/web-search:web-search bun 1.4 release notes`.
 
@@ -35,7 +35,19 @@ A typical web page is 20,000–100,000 tokens, and most of that is menus and lin
 - **Many sources at once:** the web, news, Reddit, Hacker News, GitHub, Stack Overflow, X, YouTube, Wikipedia and arXiv, merged by URL. Pages found by several sources rank higher.
 - **Better results:** off-topic hits are dropped (by Jev if you have a TypeSafe key, otherwise Jina Reranker).
 - **Cache:** repeat calls are free (searches are kept 1 hour, pages 24 hours).
-- **Speed:** about 75 ms to start, 1–2 s per search, under 1 s per page.
+- **Speed:** about 75 ms to start, 1–2 s per search; a search that also reads the top 2 pages takes about 2.6 s (median, benchmark below).
+
+## Benchmark
+
+The same 10 questions (facts, docs, a paper, an error message, a Reddit opinion question), measuring what the agent receives: tokens (characters ÷ 4), time, and whether the answer is in the output. web-search ran `search "<question>" --read 2` with an empty local cache. Run it yourself with `bun bench/run.ts`.
+
+| | Tokens to the agent (10 questions) | Median per question | Median time | Answer in output |
+|---|---|---|---|---|
+| Jina Search directly (`s.jina.ai`) | 771,808 | 62,867 | 9.5 s | 10 / 10 |
+| web-search, Jina only | 31,770 | 3,596 | 2.6 s | 10 / 10 |
+| web-search + Jev | 33,230 | 3,674 | 5.2 s | 10 / 10 |
+
+web-search sends the agent about 24x fewer tokens than Jina's search API and is about 3.5x faster, with the same answers found. Jev did not change the result on these questions; see the note in Quick start. Not measured: Claude Code's built-in WebSearch/WebFetch (the plugin's hook redirects them, and WebFetch summarizes pages with a separate model call, so its cost doesn't show up in the output size). Measured 2026-09-22 on one Windows machine.
 
 ## Commands
 
