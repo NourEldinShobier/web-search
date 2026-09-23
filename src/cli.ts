@@ -131,10 +131,14 @@ function formatPage(p: Page): string {
   if (p.warning && !/cached snapshot/i.test(p.warning)) lines.push(`> ${clip(p.warning, 200)}`);
   lines.push('', p.content.trim());
   if (p.links && Object.keys(p.links).length) {
-    lines.push('', '## Links', ...Object.entries(p.links).slice(0, 40).map(([t, u]) => `- ${clip(t, 80)}: ${u}`));
+    const links = Object.entries(p.links);
+    lines.push('', '## Links', ...links.slice(0, 40).map(([t, u]) => `- ${clip(t, 80)}: ${u}`));
+    if (links.length > 40) lines.push(`- … ${links.length - 40} more links (--json has all)`);
   }
   if (p.images && Object.keys(p.images).length) {
-    lines.push('', '## Images', ...Object.entries(p.images).slice(0, 20).map(([t, u]) => `- ${clip(t, 80)}: ${u}`));
+    const images = Object.entries(p.images);
+    lines.push('', '## Images', ...images.slice(0, 20).map(([t, u]) => `- ${clip(t, 80)}: ${u}`));
+    if (images.length > 20) lines.push(`- … ${images.length - 20} more images (--json has all)`);
   }
   return lines.join('\n');
 }
@@ -204,9 +208,12 @@ async function cmdSearch(type: SearchType, query: string, v: Values) {
   const p = await plan(type, query, { sources, time, site, fresh }, warn);
   let items: Hit[] = await gather(p, fetchN, fresh, warn);
 
+  let lessRelevant = 0;
   if (useRerank && items.length > 1) {
     try {
+      const before = items.length;
       items = keepRelevant(items, await score(query, items, fresh));
+      lessRelevant = before - items.length;
     } catch (e) {
       warn(`rerank skipped: ${(e as Error).message}`);
     }
@@ -221,12 +228,14 @@ async function cmdSearch(type: SearchType, query: string, v: Values) {
 
   if (v.json) {
     const read = pages.map((pg, i) => (pg.status === 'fulfilled' ? pg.value : { url: items[i]!.url, error: String((pg.reason as Error).message) }));
-    out(JSON.stringify({ query, type, plan: p, results: items, ...(readK ? { pages: read } : {}) }));
+    out(JSON.stringify({ query, type, plan: p, results: items, lessRelevantHidden: lessRelevant, ...(readK ? { pages: read } : {}) }));
   } else if (v.urls) {
     out(items.map((i) => i.url).join('\n'));
   } else {
     if (showPlan) out(planLine(p, query));
     out(formatResults(items, type, p.sources.length > 1));
+    // Say what the relevance filter removed, so a missing result is never taken for "not on the web".
+    if (lessRelevant) out(`(${lessRelevant} result${lessRelevant > 1 ? "s" : ""} scored as less relevant hidden; --no-rerank shows everything)`);
     pages.forEach((pg, i) =>
       out(`\n---\n\n${pg.status === 'fulfilled' ? formatPage(pg.value) : `# ${items[i]!.url}\n[read failed: ${(pg.reason as Error).message}]`}`)
     );
